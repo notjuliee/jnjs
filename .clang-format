@@ -1,0 +1,6 @@
+BasedOnStyle: LLVM
+AlignAfterOpenBracket: DontAlign
+IndentWidth: 4
+ColumnLimit: 120
+AllowShortCaseLabelsOnASingleLine: true
+FixNamespaceComments: true
