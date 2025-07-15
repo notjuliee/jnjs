@@ -13,6 +13,7 @@ endif ()
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
 
 include(CMakeDependentOption)
 
@@ -35,6 +36,7 @@ add_library(jnjs
         src/runtime.cpp
         src/value.cpp
         src/value_helpers.cpp
+        src/assert.h
 )
 target_include_directories(jnjs PUBLIC include PRIVATE src)
 target_link_libraries(jnjs PRIVATE qjs::qjs)

@@ -1,11 +1,21 @@
 #pragma once
 
+/**
+ * @file jnjs.h
+ * @brief all includes for jnjs
+ * @date 2025-07-14
+ */
+
 #include <memory>
 
 #include "context.h"
 
 namespace jnjs {
 
+/**
+ * @brief js runtime instance
+ * @note only one runtime can ever exist in the applications lifecycle
+ */
 class runtime : detail::qjs::impl_ptr<detail::qjs::JSRuntime> {
     using base = detail::qjs::impl_ptr<detail::qjs::JSRuntime>;
 
@@ -15,6 +25,10 @@ class runtime : detail::qjs::impl_ptr<detail::qjs::JSRuntime> {
         return instance;
     }
 
+    /**
+     * @brief create a new js context
+     * @return a js context using this runtime
+     */
     static context new_context() { return instance()._new_context(); }
 
   private:

@@ -12,7 +12,6 @@ value::~value() {
         JS_FreeValue(_ctx, _v);
     }
     _ctx = nullptr;
-    _v = JS_UNDEFINED;
 }
 
 value &value::operator=(const value &o) noexcept {

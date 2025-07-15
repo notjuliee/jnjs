@@ -11,11 +11,13 @@
 
 namespace jnjs {
 
+/**
+ * @brief javascript context
+ */
 class context : detail::qjs::impl_ptr<detail::qjs::JSContext> {
     using base = detail::qjs::impl_ptr<detail::qjs::JSContext>;
 
   public:
-    explicit context(detail::qjs::JSRuntime &);
     ~context() = default;
 
     value eval(std::string_view code);
@@ -36,9 +38,11 @@ class context : detail::qjs::impl_ptr<detail::qjs::JSContext> {
     }
 
   private:
+    explicit context(detail::qjs::JSRuntime &);
     value _make_class_value(uint32_t id, void *ptr) const;
     value _make_cfunc_value(const char *name, void *fn, int len) const;
     void _decl_class_impl(const detail::class_builder_data &, detail::internal_class_meta_data &o);
+    friend runtime;
 };
 
 } // namespace jnjs

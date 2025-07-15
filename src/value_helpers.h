@@ -44,25 +44,43 @@ template <> struct value_helpers<bool> {
 };
 
 template <> struct value_helpers<int32_t> {
-    static bool is(JSContext *, JSValue v) { return v.tag == JS_TAG_INT; }
-    static bool is_convertible(JSContext *, JSValue) { return true; }
-    static int32_t as(JSContext *c, JSValue v) {
+    HEDLEY_ALWAYS_INLINE
+    HEDLEY_CONST
+    constexpr static bool is(JSContext *, JSValue v) { return v.tag == JS_TAG_INT; }
+    HEDLEY_ALWAYS_INLINE
+    HEDLEY_CONST
+    constexpr static bool is_convertible(JSContext *, JSValue) { return true; }
+    HEDLEY_NON_NULL(1)
+    HEDLEY_ALWAYS_INLINE
+    HEDLEY_CONST
+    static int32_t as(HEDLEY_NO_ESCAPE JSContext *c, JSValue v) {
         int32_t ret;
         JS_ToInt32(c, &ret, v);
         return ret;
     }
-    static JSValue from(JSContext *c, const int32_t &v) { return JS_NewInt32(c, v); }
+    HEDLEY_ALWAYS_INLINE
+    HEDLEY_CONST
+    constexpr static JSValue from(JSContext *, const int32_t &v) { return JSValue{v, JS_TAG_INT}; }
+    HEDLEY_NON_NULL(1)
     static constexpr const char *name() { return "int"; }
 };
 
 template <> struct value_helpers<int64_t> {
-    static bool is(JSContext *, JSValue v) { return v.tag == JS_TAG_SHORT_BIG_INT || v.tag == JS_TAG_INT; }
-    static bool is_convertible(JSContext *, JSValue) { return true; }
+    HEDLEY_NON_NULL(1)
+    HEDLEY_ALWAYS_INLINE
+    HEDLEY_CONST
+    constexpr static bool is(JSContext *, JSValue v) { return v.tag == JS_TAG_SHORT_BIG_INT || v.tag == JS_TAG_INT; }
+    HEDLEY_NON_NULL(1)
+    HEDLEY_ALWAYS_INLINE
+    HEDLEY_CONST
+    constexpr static bool is_convertible(JSContext *, JSValue) { return true; }
+    HEDLEY_NON_NULL(1)
     static int64_t as(JSContext *c, JSValue v) {
         int64_t ret;
         JS_ToInt64(c, &ret, v);
         return ret;
     }
+    HEDLEY_NON_NULL(1)
     static JSValue from(JSContext *c, const int64_t &v) { return JS_NewInt64(c, v); }
     static constexpr const char *name() { return "long"; }
 };

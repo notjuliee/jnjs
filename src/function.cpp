@@ -7,8 +7,7 @@
 
 namespace jnjs {
 
-value function::_invoke_impl(detail::qjs::JSValue *v, int c) {
-    assert(_v.is<jnjs::function>());
+value function::_invoke_impl(detail::qjs::JSValue *v, int c) const {
     auto r = JS_Call(_v._ctx, _v._v, _this._v, c, reinterpret_cast<JSValue *>(v));
     return detail::impl_value_helpers::make_value(_v._ctx, r);
 }

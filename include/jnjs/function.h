@@ -20,7 +20,7 @@ class function {
     }
 
   private:
-    value _invoke_impl(detail::qjs::JSValue *v, int c);
+    value _invoke_impl(detail::qjs::JSValue *v, int c) const;
 
     explicit function(value v, value this_ = {}) : _v(std::move(v)), _this(std::move(this_)) {}
 

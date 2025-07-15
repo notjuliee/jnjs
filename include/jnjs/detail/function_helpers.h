@@ -5,6 +5,7 @@
 #include <stdexcept>
 #include <utility>
 
+#include "hedley.h"
 #include "quickjs_stub.h"
 #include "types.h"
 
@@ -55,57 +56,79 @@ struct arg_list_helpers {
     static bool is_null_or_undefined(int argc, qjs::JSValue *argv, int i);
 
     template <typename T, typename = void> struct getter {
-        static T get(void *ctx, int argc, qjs::JSValue *argv, int i, bool strict);
+        HEDLEY_PURE
+        HEDLEY_NON_NULL(1, 3)
+        static T get(void *HEDLEY_RESTRICT ctx, int argc, qjs::JSValue *HEDLEY_RESTRICT argv, int i, bool strict);
     };
     template <typename T> struct getter<std::optional<T>> {
-        static std::optional<T> get(void *ctx, int argc, qjs::JSValue *argv, int i, bool strict) {
+        HEDLEY_PURE
+        HEDLEY_ALWAYS_INLINE
+        HEDLEY_NON_NULL(1, 3)
+        static std::optional<T> get(
+            void *HEDLEY_RESTRICT ctx, int argc, qjs::JSValue *HEDLEY_RESTRICT argv, int i, bool strict) {
             if (is_null_or_undefined(argc, argv, i))
                 return std::nullopt;
             return getter<T>::get(ctx, argc, argv, i, strict);
         }
     };
     template <typename T> struct getter<must_be<T>> {
-        static T get(void *ctx, int argc, qjs::JSValue *argv, int i, bool) {
+        HEDLEY_PURE
+        HEDLEY_ALWAYS_INLINE
+        HEDLEY_NON_NULL(1, 3)
+        static T get(void *HEDLEY_RESTRICT ctx, int argc, qjs::JSValue *HEDLEY_RESTRICT argv, int i, bool) {
             return getter<T>::get(ctx, argc, argv, i, true);
         }
     };
     template <typename T> struct getter<T, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
+        HEDLEY_PURE
+        HEDLEY_NON_NULL(1, 3)
         static T &get(void *ctx, int argc, qjs::JSValue *argv, int i, bool) {
             auto [ptr, id] = getter<impl_wrapped_class>::get(ctx, argc, argv, i, true);
-            if (id != internal_class_meta<std::decay_t<T>>::data.id) {
+            if (HEDLEY_UNLIKELY(id != internal_class_meta<std::decay_t<T>>::data.id)) {
                 asserters::assertion_failure(ctx, "Argument has incorrect type");
             }
             return *static_cast<remove_ref_cv_t<T> *>(ptr);
         }
     };
     template <typename T> struct getter<T *, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
+        HEDLEY_PURE
+        HEDLEY_NON_NULL(1, 3)
         static T *get(void *ctx, int argc, qjs::JSValue *argv, int i, bool) {
             auto [ptr, id] = getter<impl_wrapped_class>::get(ctx, argc, argv, i, false);
-            if (id != internal_class_meta<std::decay_t<T>>::data.id && id != 0) {
+            if (id != 0 && HEDLEY_UNLIKELY(id != internal_class_meta<std::decay_t<T>>::data.id)) {
                 asserters::assertion_failure(ctx, "Argument has incorrect type");
             }
             return static_cast<remove_ref_cv_t<T> *>(ptr);
         }
     };
     template <typename T> struct setter {
+        HEDLEY_NON_NULL(1)
         static qjs::JSValue set(void *ctx, const T &v);
     };
     struct this_getter {
+        HEDLEY_PURE
+        HEDLEY_NON_NULL(1)
         static void *get(void *ctx, qjs::JSValue js_this, uint32_t id);
     };
     struct asserters {
-        static void assertion_failure(void *ctx, const char *msg);
+        HEDLEY_NON_NULL(1, 2)
+        HEDLEY_NO_RETURN
+        static void assertion_failure(void *HEDLEY_RESTRICT ctx, const char *HEDLEY_RESTRICT msg);
     };
+    HEDLEY_PURE
+    HEDLEY_NON_NULL(1, 3)
     template <typename T> static T get(qjs::JSContext *ctx, int argc, qjs::JSValue *argv, int i) {
         return getter<T>::get(ctx, argc, argv, i, false);
     }
+    HEDLEY_NON_NULL(1)
     template <typename T> static qjs::JSValue set(qjs::JSContext *ctx, const T &v) { return setter<T>::set(ctx, v); }
+    HEDLEY_PURE
     template <typename T> static T *get_class(qjs::JSContext *ctx, qjs::JSValue js_this) {
         return static_cast<T *>(this_getter::get(ctx, js_this, internal_class_meta<T>::data.id));
     }
 
     static void assert_called_new(qjs::JSContext *ctx, qjs::JSValue v) {
-        if (!get<must_be<bool>>(ctx, 1, &v, 0)) {
+        if (HEDLEY_UNLIKELY(!get<must_be<bool>>(ctx, 1, &v, 0))) {
             asserters::assertion_failure(ctx, "Class constructor must be called with new");
         }
     }

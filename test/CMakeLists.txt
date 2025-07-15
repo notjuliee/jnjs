@@ -8,6 +8,5 @@ catch_discover_tests(jnjs_tests)
 
 add_executable(jnjs_benchmarks
         benchmarks.cpp
-        common.h
 )
 target_link_libraries(jnjs_benchmarks PRIVATE Catch2::Catch2WithMain jnjs)
