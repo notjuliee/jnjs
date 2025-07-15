@@ -28,7 +28,7 @@ HEDLEY_ALWAYS_INLINE HEDLEY_PURE std::decay_t<T> pull_value_impl(
         throw js_exception(JS_ThrowRangeError(c, "Argument out of range (%d >= %d)", i, argc));
     }
     if (!(strict ? H::is(c, argv[i]) : H::is_convertible(c, argv[i])))
-        throw js_exception(JS_ThrowTypeError(c, "Argument %d is not of type %s", i, H::name()));
+        throw js_exception(JS_ThrowTypeError(c, "Argument %d is not of type %s", i, typeid(T).name()));
     return H::as(c, argv[i]);
 }
 template <typename T> HEDLEY_NON_NULL(1) HEDLEY_ALWAYS_INLINE JSValue push_value_impl(JSContext *c, const T &v) {

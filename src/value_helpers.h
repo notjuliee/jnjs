@@ -14,7 +14,6 @@ template <typename T> struct value_helpers {
     static bool is_convertible(JSContext *c, JSValue v);
     static T as(JSContext *c, JSValue v);
     static JSValue from(JSContext *c, const T &v);
-    static constexpr const char *name();
 };
 
 struct impl_value_helpers {
@@ -32,7 +31,6 @@ template <> struct value_helpers<undefined> {
     static bool is_convertible(JSContext *c, JSValue v) { return is(c, v); }
     static undefined as(JSContext *, JSValue) { return {}; }
     static JSValue from(JSContext *, const undefined &) { return JS_UNDEFINED; }
-    static constexpr const char *name() { return "undefined"; }
 };
 
 template <> struct value_helpers<bool> {
@@ -40,7 +38,6 @@ template <> struct value_helpers<bool> {
     static bool is_convertible(JSContext *, JSValue) { return true; }
     static bool as(JSContext *c, JSValue v) { return JS_ToBool(c, v) != 0; }
     static JSValue from(JSContext *c, const bool &v) { return JS_NewBool(c, v); }
-    static constexpr const char *name() { return "bool"; }
 };
 
 template <> struct value_helpers<int32_t> {
@@ -62,7 +59,6 @@ template <> struct value_helpers<int32_t> {
     HEDLEY_CONST
     constexpr static JSValue from(JSContext *, const int32_t &v) { return JSValue{v, JS_TAG_INT}; }
     HEDLEY_NON_NULL(1)
-    static constexpr const char *name() { return "int"; }
 };
 
 template <> struct value_helpers<int64_t> {
@@ -82,7 +78,6 @@ template <> struct value_helpers<int64_t> {
     }
     HEDLEY_NON_NULL(1)
     static JSValue from(JSContext *c, const int64_t &v) { return JS_NewInt64(c, v); }
-    static constexpr const char *name() { return "long"; }
 };
 
 template <> struct value_helpers<uint32_t> {
@@ -90,7 +85,6 @@ template <> struct value_helpers<uint32_t> {
     static bool is_convertible(JSContext *, JSValue) { return true; }
     static uint32_t as(JSContext *c, JSValue v) { return static_cast<uint32_t>(value_helpers<int64_t>::as(c, v)); }
     static JSValue from(JSContext *c, const uint32_t &v) { return JS_NewInt64(c, v); }
-    static constexpr const char *name() { return "uint"; }
 };
 
 template <> struct value_helpers<uint64_t> {
@@ -98,7 +92,6 @@ template <> struct value_helpers<uint64_t> {
     static bool is_convertible(JSContext *, JSValue) { return true; }
     static uint32_t as(JSContext *c, JSValue v) { return static_cast<uint64_t>(value_helpers<int64_t>::as(c, v)); }
     static JSValue from(JSContext *c, const uint64_t &v) { return JS_NewInt64(c, static_cast<const int64_t &>(v)); }
-    static constexpr const char *name() { return "ulong"; }
 };
 
 template <> struct value_helpers<std::string> {
@@ -117,7 +110,6 @@ template <> struct value_helpers<std::string> {
         return ret;
     }
     static JSValue from(JSContext *c, const std::string &v) { return JS_NewString(c, v.c_str()); }
-    static constexpr const char *name() { return "string"; }
 };
 
 template <> struct value_helpers<function> {
@@ -129,7 +121,6 @@ template <> struct value_helpers<function> {
     static JSValue from(JSContext *c, const function &v) {
         return JS_DupValue(c, impl_value_helpers::get_function_fn(v));
     }
-    static constexpr const char *name() { return "function"; }
 };
 
 template <> struct value_helpers<value> {
@@ -137,7 +128,6 @@ template <> struct value_helpers<value> {
     static bool is_convertible(JSContext *, JSValue) { return true; }
     static value as(JSContext *c, JSValue v) { return impl_value_helpers::make_value(c, v); }
     static JSValue from(JSContext *, const value &v) { return impl_value_helpers::get_v(v); }
-    static constexpr const char *name() { return "any"; }
 };
 
 template <typename T> struct value_helpers<must_be<T>> {
@@ -145,7 +135,6 @@ template <typename T> struct value_helpers<must_be<T>> {
     static bool is_convertible(JSContext *c, JSValue v) { return is(c, v); }
     static T as(JSContext *c, JSValue v) { return value_helpers<T>::as(c, v); }
     static JSValue from(JSContext *c, const T &v) { return value_helpers<T>::from(c, v); }
-    static constexpr const char *name() { return value_helpers<T>::name(); }
 };
 
 } // namespace jnjs::detail

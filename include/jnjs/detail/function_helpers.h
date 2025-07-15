@@ -142,12 +142,15 @@ template <auto Func> struct binder {
         static constexpr size_t num_args = sizeof...(TArgs);
 
         template <std::size_t... Is>
-        static ret_type invoke(qjs::JSContext *ctx, int argc, qjs::JSValue *argv, std::index_sequence<Is...>) {
+        HEDLEY_NON_NULL(1, 3)
+        HEDLEY_PURE static ret_type
+            invoke(qjs::JSContext *ctx, int argc, qjs::JSValue *argv, std::index_sequence<Is...>) {
             return Func(std::forward<getter_type_t<TArgs> &&>(
                 arg_list_helpers::get<getter_type_t<TArgs>>(ctx, argc, argv, Is))...);
         }
 
         template <typename TRetI = TRet>
+        HEDLEY_NON_NULL(1, 3)
         static std::enable_if_t<!std::is_same_v<TRetI, void>, qjs::JSValue> call_impl(
             qjs::JSContext *ctx, int argc, qjs::JSValue *argv) {
             return arg_list_helpers::set<ret_type>(ctx, invoke(ctx, argc, argv, std::make_index_sequence<num_args>{}));
@@ -162,6 +165,7 @@ template <auto Func> struct binder {
 
     using inner = binder_inner<decltype(Func)>;
     static constexpr size_t num_args = inner::num_args;
+    HEDLEY_NON_NULL(1, 3)
     static qjs::JSValue call(qjs::JSContext *ctx, qjs::JSValue, int argc, qjs::JSValue *argv) {
         try {
             return inner::call_impl(ctx, argc, argv);
@@ -170,6 +174,7 @@ template <auto Func> struct binder {
         }
     }
 
+    HEDLEY_NON_NULL(1, 5)
     static qjs::JSValue call_ctor_t(
         qjs::JSContext *ctx, qjs::JSValue func_obj, qjs::JSValue js_this, int argc, qjs::JSValue *argv, int flags) {
         (void)func_obj; // idk what use we'd have for this
@@ -191,7 +196,8 @@ template <typename Klass, auto Func> struct class_binder {
         static constexpr size_t num_args = sizeof...(TArgs);
 
         template <std::size_t... Is>
-        static TRet invoke(
+        HEDLEY_NON_NULL(1, 3)
+        HEDLEY_PURE static ret_type invoke(
             qjs::JSContext *ctx, qjs::JSValue js_this, int argc, qjs::JSValue *argv, std::index_sequence<Is...>) {
             Klass *kThis = arg_list_helpers::get_class<Klass>(ctx, js_this);
             return (kThis->*Func)(std::forward<getter_type_t<TArgs> &&>(
@@ -199,13 +205,15 @@ template <typename Klass, auto Func> struct class_binder {
         }
 
         template <typename TRetI = TRet>
+        HEDLEY_NON_NULL(1, 4)
         static std::enable_if_t<!std::is_same_v<TRetI, void>, qjs::JSValue> call_impl(
             qjs::JSContext *ctx, qjs::JSValue js_this, int argc, qjs::JSValue *argv) {
             return arg_list_helpers::set<ret_type>(
                 ctx, invoke(ctx, js_this, argc, argv, std::make_index_sequence<num_args>{}));
         }
         template <typename TRetI = TRet>
-        static std::enable_if_t<std::is_same_v<TRetI, void>, qjs::JSValue> call_impl(
+        HEDLEY_NON_NULL(1, 4)
+        HEDLEY_PURE static std::enable_if_t<std::is_same_v<TRetI, void>, qjs::JSValue> call_impl(
             qjs::JSContext *ctx, qjs::JSValue js_this, int argc, qjs::JSValue *argv) {
             invoke(ctx, js_this, argc, argv, std::make_index_sequence<num_args>{});
             return arg_list_helpers::set<undefined>(ctx, undefined{});
@@ -215,6 +223,7 @@ template <typename Klass, auto Func> struct class_binder {
     using inner = binder_inner<decltype(Func)>;
     using ret_type = typename inner::ret_type;
     static constexpr size_t num_args = inner::num_args;
+    HEDLEY_NON_NULL(1, 4)
     static qjs::JSValue call(qjs::JSContext *ctx, qjs::JSValue js_this, int argc, qjs::JSValue *argv) {
         try {
             return inner::call_impl(ctx, js_this, argc, argv);
@@ -223,6 +232,7 @@ template <typename Klass, auto Func> struct class_binder {
         }
     }
 
+    HEDLEY_NON_NULL(1)
     static qjs::JSValue call_get(qjs::JSContext *ctx, qjs::JSValue js_this) {
         static_assert(num_args == 0, "getter must have 0 arguments");
         static_assert(!std::is_same_v<ret_type, void>, "getter can't return void");
@@ -233,6 +243,7 @@ template <typename Klass, auto Func> struct class_binder {
         }
     }
 
+    HEDLEY_NON_NULL(1)
     static qjs::JSValue call_set(qjs::JSContext *ctx, qjs::JSValue js_this, qjs::JSValue arg) {
         static_assert(num_args == 1, "setter must have 1 argument");
         try {

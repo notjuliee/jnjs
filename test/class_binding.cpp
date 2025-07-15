@@ -39,7 +39,7 @@ struct dynamic_test {
 
 } // namespace
 
-TEST_CASE("Static instance binding", "[class]") {
+TEST_CASE("Class binding", "[class]") {
     auto ctx = runtime::new_context();
     ctx.install_class<static_test>();
     ctx.install_class<dynamic_test>();
