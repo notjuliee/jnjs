@@ -15,7 +15,7 @@ struct test_class {
 
     int add(int a1, std::optional<int> a2 = std::nullopt) { return a1 + a2.value_or(1); }
 
-    constexpr static jnjs::wrapped_class_builder<test_class> build() {
+    constexpr static jnjs::wrapped_class_builder<test_class> build_js_class() {
         jnjs::wrapped_class_builder<test_class> b("test_class");
         b.bind_function<&test_class::do_something>("do_something");
         b.bind_function<&test_class::do_something_else>("do_something_else");
@@ -36,7 +36,7 @@ struct class_2 {
         std::cout << _greet << ", " << (other ? other->_greet : std::string("???")) << std::endl;
     }
 
-    constexpr static jnjs::wrapped_class_builder<class_2> build() {
+    constexpr static jnjs::wrapped_class_builder<class_2> build_js_class() {
         jnjs::wrapped_class_builder<class_2> b("class_2");
         b.bind_ctor<const std::string &>();
         b.bind_function<&class_2::hi>("hi");
@@ -65,8 +65,7 @@ int main() {
         auto ret = fn(1, 2);
 
         test_class t;
-        auto c_v = ctx.make_static_value(&t);
-        ctx.set_global("test_class", c_v);
+        ctx.set_global("test_class", &t);
 
         eval_log(ctx, "test_class.do_something('123')");
         eval_log(ctx, "test_class.do_something(123, 456)");

@@ -11,7 +11,7 @@ struct static_test {
 
     value call_js_function(function fn, const value &v) { return fn(v); }
 
-    constexpr static wrapped_class_builder<static_test> build() {
+    constexpr static wrapped_class_builder<static_test> build_js_class() {
         wrapped_class_builder<static_test> builder("static_test");
         builder.bind_function<&static_test::do_something>("do_something");
         builder.bind_function<&static_test::call_js_function>("call_js_function");
@@ -26,7 +26,7 @@ struct dynamic_test {
     void set(int a_) { a = a_; }
     void copy(const dynamic_test &o) { a = o.a; }
 
-    constexpr static wrapped_class_builder<dynamic_test> build() {
+    constexpr static wrapped_class_builder<dynamic_test> build_js_class() {
         wrapped_class_builder<dynamic_test> builder("dynamic_test");
         builder.bind_ctor<std::optional<int>>();
         builder.bind_getset<&dynamic_test::get, &dynamic_test::set>("a");
@@ -44,7 +44,7 @@ TEST_CASE("Class binding", "[class]") {
     ctx.install_class<static_test>();
     ctx.install_class<dynamic_test>();
     static_test st;
-    ctx.set_global("st", ctx.make_static_value(&st));
+    ctx.set_global("st", &st);
 
     SECTION("Something works") {
         auto ret = ctx.eval("st.do_something()");

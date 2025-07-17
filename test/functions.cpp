@@ -24,9 +24,7 @@ TEST_CASE("Basic functions", "[functions]") {
     }
 
     {
-        auto v3 = ctx.make_cfunc_value<c_add>("c_add");
-        REQUIRE(v3.is<jnjs::function>());
-        ctx.set_global("c_add", v3);
+        ctx.set_global_fn<c_add>("c_add");
         REQUIRE(ctx.eval("c_add").is<jnjs::function>());
     }
 

@@ -10,14 +10,16 @@
 
 #include "context.h"
 
+#include "detail/util.h"
+
 namespace jnjs {
 
 /**
  * @brief js runtime instance
  * @note only one runtime can ever exist in the applications lifecycle
  */
-class runtime : detail::qjs::impl_ptr<detail::qjs::JSRuntime> {
-    using base = detail::qjs::impl_ptr<detail::qjs::JSRuntime>;
+class runtime : detail::impl_ptr<JSRuntime> {
+    using base = detail::impl_ptr<JSRuntime>;
 
   public:
     static runtime &instance() {

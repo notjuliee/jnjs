@@ -9,12 +9,22 @@
 #endif
 
 namespace {
-noinline volatile int c_add(volatile int a, volatile int b) { return a + b; }
+[[clang::optnone]] int c_add(int a, int b) { return a + b; }
+
+[[clang::optnone]] int c_add_iter(int c) {
+    uint64_t sum = 0;
+    for (int i = 0; i < c; ++i) {
+        sum += c_add(i, i);
+    }
+    return sum;
+}
+
+#pragma optimize("", on)
 } // namespace
 
 TEST_CASE("Function benchmarks", "[benchmarks]") {
     auto ctx = jnjs::runtime::new_context();
-    ctx.set_global("c_add", ctx.make_cfunc_value<c_add>("c_add"));
+    ctx.set_global_fn<c_add>("c_add");
     auto f_js = ctx.eval("(a, b) => { return a + b; }").as<jnjs::function>();
     auto f_c = ctx.eval("c_add").as<jnjs::function>();
     auto f_js_c = ctx.eval("(a, b) => { return c_add(a, b); }").as<jnjs::function>();
@@ -24,13 +34,7 @@ TEST_CASE("Function benchmarks", "[benchmarks]") {
 
     auto iter_count = GENERATE(1, 1000);
 
-    BENCHMARK("add_c iters=" + std::to_string(iter_count)) {
-        uint64_t sum = 0;
-        for (int i = 0; i < iter_count; ++i) {
-            sum += c_add(i, i);
-        }
-        return sum;
-    };
+    BENCHMARK("add_c iters=" + std::to_string(iter_count)) { return c_add_iter(iter_count); };
     BENCHMARK("add_f_js iters=" + std::to_string(iter_count)) {
         uint64_t sum = 0;
         for (int i = 0; i < iter_count; ++i) {

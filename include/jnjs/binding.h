@@ -9,15 +9,16 @@
 namespace jnjs {
 
 namespace detail {
-constexpr uint8_t max_function_count = 64;
 
 struct class_builder_data {
+    constexpr static uint8_t max_function_count = 64;
     uint8_t cur_fn = 0;
-    std::array<qjs::JSCFunctionListEntry, max_function_count> fns = {};
-    qjs::JSClassDef def = {};
-    qjs::fn_generic ctor = nullptr;
+    JSCFunctionListEntry fns[max_function_count];
+    JSClassDef def = {};
+    JSCFunction *ctor = nullptr;
     int ctor_len = 0;
 };
+
 } // namespace detail
 
 /**
@@ -39,9 +40,9 @@ template <typename Klass> struct wrapped_class_builder {
     template <auto Func> constexpr void bind_function(const char *name) {
         using binder = detail::class_binder<Klass, Func>;
         auto &fn = _next_entry(name);
-        fn.func.length = binder::num_args;
-        fn.func.cproto = detail::qjs::fn_type_which::generic;
-        fn.func.fn.generic = binder::call;
+        fn.u.func.length = binder::num_args;
+        fn.u.func.cproto = JS_CFUNC_generic;
+        fn.u.func.cfunc.generic = binder::call;
     }
 
     /**
@@ -54,10 +55,10 @@ template <typename Klass> struct wrapped_class_builder {
     template <auto Func> constexpr void bind_getter(const char *name) {
         using binder = detail::class_binder<Klass, Func>;
         auto &fn = _next_entry(name);
-        fn.def_type = detail::qjs::fn_def_type::getset;
-        fn.getset = {};
-        fn.getset.getter = binder::call_get;
-        fn.getset.setter = nullptr;
+        fn.def_type = JS_DEF_CGETSET;
+        fn.u.getset = {};
+        fn.u.getset.get.getter = binder::call_get;
+        fn.u.getset.set.setter = nullptr;
     }
 
     /**
@@ -70,10 +71,10 @@ template <typename Klass> struct wrapped_class_builder {
     template <auto Func> constexpr void bind_setter(const char *name) {
         using binder = detail::class_binder<Klass, Func>;
         auto &fn = _next_entry(name);
-        fn.def_type = detail::qjs::fn_def_type::getset;
-        fn.getset = {};
-        fn.getset.getter = nullptr;
-        fn.getset.setter = binder::call;
+        fn.def_type = JS_DEF_CGETSET;
+        fn.u.getset = {};
+        fn.u.getset.get.getter = nullptr;
+        fn.u.getset.set.setter = binder::call_set;
     }
 
     /**
@@ -88,10 +89,10 @@ template <typename Klass> struct wrapped_class_builder {
         using binder_g = detail::class_binder<Klass, FuncG>;
         using binder_s = detail::class_binder<Klass, FuncS>;
         auto &fn = _next_entry(name);
-        fn.def_type = detail::qjs::fn_def_type::getset;
-        fn.getset = {};
-        fn.getset.getter = binder_g::call_get;
-        fn.getset.setter = binder_s::call_set;
+        fn.def_type = JS_DEF_CGETSET;
+        fn.u.getset = {};
+        fn.u.getset.get.getter = binder_g::call_get;
+        fn.u.getset.set.setter = binder_s::call_set;
     }
 
     /**
@@ -108,28 +109,25 @@ template <typename Klass> struct wrapped_class_builder {
 
   private:
     constexpr void _bind_dtor() {
-        if (_d.def.dtor)
+        if (_d.def.finalizer)
             return;
-        _d.def.dtor = dtor_helper::call;
+        _d.def.finalizer = dtor_helper::call;
     }
 
-    constexpr detail::qjs::JSCFunctionListEntry &_next_entry(const char *name) {
-        auto &fn = _d.fns.at(_d.cur_fn++);
-        fn = {};
+    constexpr JSCFunctionListEntry &_next_entry(const char *name) {
+        auto &fn = _d.fns[_d.cur_fn++];
         fn.name = name;
-        fn.prop_flags = detail::qjs::fn_prop_flags::enumerable;
-        fn.def_type = detail::qjs::fn_def_type::function;
+        fn.prop_flags = JS_PROP_ENUMERABLE;
+        fn.def_type = JS_DEF_CFUNC;
         return fn;
     }
 
     template <typename... Args> struct ctor_helper {
-        static detail::impl_wrapped_class call(Args &&...args) {
-            return detail::impl_wrapped_class::from(new Klass(std::forward<Args &&>(args)...));
-        }
+        static Klass *call(Args &&...args) { return new Klass(std::forward<Args &&>(args)...); }
     };
     struct dtor_helper {
-        static void call(detail::qjs::JSContext *c, detail::qjs::JSValue v) {
-            auto *t = detail::arg_list_helpers::get_class<Klass>(c, v);
+        static void call(JSRuntime *, JSValue v) {
+            auto *t = detail::arg_list_helpers::get_class<Klass>(v);
             delete t;
         }
     };

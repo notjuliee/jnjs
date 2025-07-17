@@ -11,9 +11,11 @@ else ()
     set(JNJS_ROOT_PROJECT OFF)
 endif ()
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+if (NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+endif ()
 
 include(CMakeDependentOption)
 
@@ -29,17 +31,11 @@ endif ()
 add_subdirectory(ext EXCLUDE_FROM_ALL)
 
 add_library(jnjs
-        src/binding.cpp
         src/context.cpp
-        src/function.cpp
-        src/function_helpers.cpp
         src/runtime.cpp
-        src/value.cpp
-        src/value_helpers.cpp
-        src/assert.h
 )
 target_include_directories(jnjs PUBLIC include PRIVATE src)
-target_link_libraries(jnjs PRIVATE qjs::qjs)
+target_link_libraries(jnjs PUBLIC qjs::qjs)
 
 add_executable(jnjs_cli main.cpp)
 target_link_libraries(jnjs_cli jnjs)

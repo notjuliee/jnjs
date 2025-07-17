@@ -28,4 +28,7 @@ template <typename T> struct key {
     friend T;
 };
 
+template<typename T>
+using impl_ptr = std::unique_ptr<T, void (*)(T *)>;
+
 } // namespace jnjs::detail
