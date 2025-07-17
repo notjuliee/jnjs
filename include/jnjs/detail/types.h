@@ -4,7 +4,6 @@ namespace jnjs {
 
 namespace detail {
 struct internal_class_meta_data {
-    void *ctx = nullptr;
     uint32_t id = 0;
 };
 template <typename T> struct internal_class_meta {

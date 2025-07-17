@@ -2,8 +2,6 @@
 
 #include <quickjs.h>
 
-#include <string>
-
 #include "fwd.h"
 #include "hedley.h"
 #include "type_traits.h"
@@ -16,6 +14,13 @@ template <> struct value_helpers<undefined> {
     static bool is_convertible(JSContext *c, JSValue v) { return is(c, v); }
     static undefined as(JSContext *, JSValue) { return {}; }
     static JSValue from(JSContext *, const undefined &) { return JS_UNDEFINED; }
+};
+
+template <> struct value_helpers<null> {
+    static bool is(JSContext *, JSValue v) { return JS_IsNull(v); }
+    static bool is_convertible(JSContext *c, JSValue v) { return is(c, v); }
+    static null as(JSContext *, JSValue) { return {}; }
+    static JSValue from(JSContext *, const null &) { return JS_NULL; }
 };
 
 template <> struct value_helpers<bool> {
@@ -79,24 +84,6 @@ template <> struct value_helpers<JSValue> { // lol
     static JSValue from(JSContext *c, const JSValue &v) { return JS_DupValue(c, v); }
 };
 
-template <> struct value_helpers<std::string> {
-    static bool is(JSContext *, JSValue v) { return JS_IsString(v); }
-    static bool is_convertible(JSContext *, JSValue) { return true; }
-    static std::string as(JSContext *c, JSValue v) {
-        auto s = JS_ToCString(c, v);
-        if (s == nullptr && JS_IsException(v)) {
-            auto e = JS_GetException(c);
-            s = JS_ToCString(c, e);
-            JS_FreeValue(c, e);
-        }
-        std::string ret(s ? s : "<error>");
-        if (s)
-            JS_FreeCString(c, s);
-        return ret;
-    }
-    static JSValue from(JSContext *c, const std::string &v) { return JS_NewString(c, v.c_str()); }
-};
-
 template <typename T> struct value_helpers<T *, std::enable_if_t<has_build_v<T>>> {
     static bool is(JSContext *c, JSValue v) { return JS_GetClassID(v) == internal_class_meta<T>::data.id; }
     static bool is_convertible(JSContext *c, JSValue v) { return is(c, v); }
@@ -115,25 +102,6 @@ template <typename T> struct value_helpers<must_be<T>> {
     static bool is_convertible(JSContext *c, JSValue v) { return is(c, v); }
     static T as(JSContext *c, JSValue v) { return value_helpers<T>::as(c, v); }
     static JSValue from(JSContext *c, const T &v) { return value_helpers<T>::from(c, v); }
-};
-
-template <typename T> struct value_helpers<std::optional<T>> {
-    static bool is(JSContext *c, JSValue v) { return JS_IsNull(v) || JS_IsUndefined(v) || value_helpers<T>::is(c, v); }
-    static bool is_convertible(JSContext *c, JSValue v) {
-        return JS_IsNull(v) || JS_IsUndefined(v) || value_helpers<T>::is_convertible(c, v);
-    }
-    static std::optional<T> as(JSContext *c, JSValue v) {
-        if (JS_IsNull(v) || JS_IsUndefined(v)) {
-            return std::nullopt;
-        }
-        return value_helpers<T>::as(c, v);
-    }
-    static JSValue from(JSContext *c, const std::optional<T> &v) {
-        if (!v.has_value()) {
-            return JS_UNDEFINED;
-        }
-        return value_helpers<T>::from(c, v.value());
-    }
 };
 
 } // namespace jnjs::detail

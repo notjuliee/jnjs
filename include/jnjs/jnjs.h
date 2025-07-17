@@ -7,6 +7,7 @@
  */
 
 #include "detail/value_helpers.h"
+#include "detail/value_ext/all.h"
 
 #include "binding.h"
 #include "context.h"

@@ -36,6 +36,7 @@ add_library(jnjs
 )
 target_include_directories(jnjs PUBLIC include PRIVATE src)
 target_link_libraries(jnjs PUBLIC qjs::qjs)
+target_precompile_headers(jnjs PUBLIC include/jnjs/jnjs.h)
 
 add_executable(jnjs_cli main.cpp)
 target_link_libraries(jnjs_cli jnjs)

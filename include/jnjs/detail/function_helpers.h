@@ -4,6 +4,7 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include <quickjs.h>
 
@@ -12,6 +13,12 @@
 #include "type_traits.h"
 #include "types.h"
 #include "value_helpers.h"
+
+namespace jnjs {
+template <typename T> struct remaining_args : std::vector<T> {
+    using std::vector<T>::vector;
+};
+} // namespace jnjs
 
 namespace jnjs::detail {
 
@@ -30,12 +37,12 @@ struct arg_list_helpers {
 
     template <typename T, typename = void> struct getter {
         HEDLEY_NON_NULL(1, 3)
-        static T get(JSContext *ctx, int argc, JSValue *argv, int i, bool strict) {
+        static T get(JSContext *ctx, int argc, JSValue *argv, int i) {
             using H = value_helpers<std::decay_t<T>>;
             if (HEDLEY_UNLIKELY(i >= argc)) {
                 throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
             }
-            if (!(strict ? H::is(ctx, argv[i]) : H::is_convertible(ctx, argv[i]))) {
+            if (!H::is_convertible(ctx, argv[i])) {
                 throw js_exception(JS_ThrowTypeError(ctx, "Argument %d is not of type %s", i, typeid(T).name()));
             }
             return H::as(ctx, argv[i]);
@@ -43,21 +50,15 @@ struct arg_list_helpers {
     };
     template <typename T> struct getter<std::optional<T>> {
         HEDLEY_NON_NULL(1, 3)
-        static std::optional<T> get(JSContext *ctx, int argc, JSValue *argv, int i, bool strict) {
+        static std::optional<T> get(JSContext *ctx, int argc, JSValue *argv, int i) {
             if (is_null_or_undefined(argc, argv, i))
                 return std::nullopt;
-            return getter<T>::get(ctx, argc, argv, i, strict);
-        }
-    };
-    template <typename T> struct getter<must_be<T>> {
-        HEDLEY_NON_NULL(1, 3)
-        static T get(JSContext *ctx, int argc, JSValue *argv, int i, bool) {
-            return getter<T>::get(ctx, argc, argv, i, true);
+            return getter<T>::get(ctx, argc, argv, i);
         }
     };
     template <typename T> struct getter<T, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
         HEDLEY_NON_NULL(1, 3)
-        static T &get(JSContext *ctx, int argc, JSValue *argv, int i, bool) {
+        static T &get(JSContext *ctx, int argc, JSValue *argv, int i) {
             if (HEDLEY_UNLIKELY(i >= argc)) {
                 throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
             }
@@ -70,9 +71,22 @@ struct arg_list_helpers {
     };
     template <typename T> struct getter<T *, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
         HEDLEY_NON_NULL(1, 3)
-        static T *get(JSContext *ctx, int argc, JSValue *argv, int i, bool) {
+        static T *get(JSContext *ctx, int argc, JSValue *argv, int i) {
             auto ptr = value_helpers<remove_ref_cv_t<T> *>::as(ctx, argv[i]);
             return static_cast<remove_ref_cv_t<T> *>(ptr);
+        }
+    };
+    template <typename T> struct getter<remaining_args<T>> {
+        HEDLEY_NON_NULL(1, 3)
+        static remaining_args<T> get(JSContext *ctx, int argc, JSValue *argv, int i) {
+            if (HEDLEY_UNLIKELY(i >= argc)) {
+                return {};
+            }
+            remaining_args<T> ret(argc - i);
+            for (int j = i; j < argc; ++j) {
+                ret.at(j) = std::move(getter<T>::get(ctx, argc, argv, j));
+            }
+            return ret;
         }
     };
     struct this_getter {
@@ -83,7 +97,7 @@ struct arg_list_helpers {
         }
     };
     template <typename T> HEDLEY_NON_NULL(1, 3) static T get(JSContext *ctx, int argc, JSValue *argv, int i) {
-        return getter<T>::get(ctx, argc, argv, i, false);
+        return getter<T>::get(ctx, argc, argv, i);
     }
     template <typename T> HEDLEY_NON_NULL(1) static JSValue set(JSContext *ctx, const T &v) {
         return value_helpers<T>::from(ctx, v);

@@ -7,11 +7,10 @@ namespace jnjs {
 namespace detail {
 namespace {
 void install_rt_class(JSRuntime *rt, const class_builder_data &d, internal_class_meta_data &o) {
-    if (o.id != 0 && o.ctx == rt)
+    if (o.id != 0)
         return;
     JS_NewClassID(rt, &o.id);
     JS_NewClass(rt, o.id, &d.def);
-    o.ctx = rt;
 }
 } // namespace
 } // namespace detail

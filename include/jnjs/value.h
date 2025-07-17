@@ -39,6 +39,10 @@ class value {
         return *this;
     }
 
+    template <typename T> bool operator==(const T &rhs) const {
+        return detail::value_helpers<T>::is_convertible(_ctx, _v) && detail::value_helpers<T>::as(_ctx, _v) == rhs;
+    }
+
     template <typename T> bool is() const { return detail::value_helpers<T>::is(_ctx, _v); }
     template <typename T> bool is_convertible() const { return detail::value_helpers<T>::is_convertible(_ctx, _v); }
     template <typename T> T as() const { return detail::value_helpers<T>::as(_ctx, _v); }
