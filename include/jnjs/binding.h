@@ -13,7 +13,7 @@ namespace detail {
 struct class_builder_data {
     constexpr static uint8_t max_function_count = 64;
     uint8_t cur_fn = 0;
-    JSCFunctionListEntry fns[max_function_count];
+    JSCFunctionListEntry fns[max_function_count] = {};
     JSClassDef def = {};
     JSCFunction *ctor = nullptr;
     int ctor_len = 0;
@@ -136,6 +136,7 @@ template <typename Klass> struct wrapped_class_builder {
     detail::class_builder_data _d = {};
     friend runtime;
     friend context;
+    friend module;
 };
 
 } // namespace jnjs

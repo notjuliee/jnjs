@@ -28,90 +28,109 @@ struct js_exception : std::exception {
     JSValue v;
 };
 
-struct arg_list_helpers {
-    HEDLEY_PURE
-    HEDLEY_NON_NULL(2)
-    static bool is_null_or_undefined(int argc, JSValue *argv, int i) {
-        return i >= argc || JS_IsNull(argv[i]) || JS_IsUndefined(argv[i]);
-    }
+namespace arg_list_helpers {
+HEDLEY_PURE
+HEDLEY_NON_NULL(2)
+static bool is_null_or_undefined(int argc, JSValue *argv, int i) {
+    return i >= argc || JS_IsNull(argv[i]) || JS_IsUndefined(argv[i]);
+}
 
-    template <typename T, typename = void> struct getter {
-        HEDLEY_NON_NULL(1, 3)
-        static T get(JSContext *ctx, int argc, JSValue *argv, int i) {
-            using H = value_helpers<std::decay_t<T>>;
-            if (HEDLEY_UNLIKELY(i >= argc)) {
-                throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
-            }
-            if (!H::is_convertible(ctx, argv[i])) {
-                throw js_exception(JS_ThrowTypeError(ctx, "Argument %d is not of type %s", i, typeid(T).name()));
-            }
-            return H::as(ctx, argv[i]);
+template <typename T, typename = void> struct getter {
+    HEDLEY_NON_NULL(1, 3)
+    static T get(JSContext *ctx, int argc, JSValue *argv, int i) {
+        using H = value_helpers<std::decay_t<T>>;
+        if (HEDLEY_UNLIKELY(i >= argc)) {
+            throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
         }
-    };
-    template <typename T> struct getter<std::optional<T>> {
-        HEDLEY_NON_NULL(1, 3)
-        static std::optional<T> get(JSContext *ctx, int argc, JSValue *argv, int i) {
-            if (is_null_or_undefined(argc, argv, i))
-                return std::nullopt;
-            return getter<T>::get(ctx, argc, argv, i);
+        if (!H::is_convertible(ctx, argv[i])) {
+            throw js_exception(JS_ThrowTypeError(ctx, "Argument %d is not of type %s", i, typeid(T).name()));
         }
-    };
-    template <typename T> struct getter<T, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
-        HEDLEY_NON_NULL(1, 3)
-        static T &get(JSContext *ctx, int argc, JSValue *argv, int i) {
-            if (HEDLEY_UNLIKELY(i >= argc)) {
-                throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
-            }
-            auto ptr = value_helpers<remove_ref_cv_t<T> *>::as(ctx, argv[i]);
-            if (HEDLEY_UNLIKELY(ptr == nullptr)) {
-                throw js_exception(JS_ThrowTypeError(ctx, "Argument %d is not of type %s", i, typeid(T).name()));
-            }
-            return *static_cast<remove_ref_cv_t<T> *>(ptr);
-        }
-    };
-    template <typename T> struct getter<T *, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
-        HEDLEY_NON_NULL(1, 3)
-        static T *get(JSContext *ctx, int argc, JSValue *argv, int i) {
-            auto ptr = value_helpers<remove_ref_cv_t<T> *>::as(ctx, argv[i]);
-            return static_cast<remove_ref_cv_t<T> *>(ptr);
-        }
-    };
-    template <typename T> struct getter<remaining_args<T>> {
-        HEDLEY_NON_NULL(1, 3)
-        static remaining_args<T> get(JSContext *ctx, int argc, JSValue *argv, int i) {
-            if (HEDLEY_UNLIKELY(i >= argc)) {
-                return {};
-            }
-            remaining_args<T> ret(argc - i);
-            for (int j = i; j < argc; ++j) {
-                ret.at(j) = std::move(getter<T>::get(ctx, argc, argv, j));
-            }
-            return ret;
-        }
-    };
-    struct this_getter {
-        HEDLEY_PURE
-        static void *get(JSValue js_this, uint32_t id) {
-            void *r = JS_GetOpaque(js_this, id);
-            return r;
-        }
-    };
-    template <typename T> HEDLEY_NON_NULL(1, 3) static T get(JSContext *ctx, int argc, JSValue *argv, int i) {
-        return getter<T>::get(ctx, argc, argv, i);
-    }
-    template <typename T> HEDLEY_NON_NULL(1) static JSValue set(JSContext *ctx, const T &v) {
-        return value_helpers<T>::from(ctx, v);
-    }
-    template <typename T> static T *get_class(JSValue js_this) {
-        return static_cast<T *>(this_getter::get(js_this, internal_class_meta<T>::data.id));
-    }
-
-    static void assert_called_new(JSContext *ctx, JSValue v) {
-        if (HEDLEY_UNLIKELY(!get<must_be<bool>>(ctx, 1, &v, 0))) {
-            throw js_exception(JS_ThrowTypeError(ctx, "Class constructor must be called with new"));
-        }
+        return H::as(ctx, argv[i]);
     }
 };
+template <typename T> struct getter<std::optional<T>> {
+    HEDLEY_NON_NULL(1, 3)
+    static std::optional<T> get(JSContext *ctx, int argc, JSValue *argv, int i) {
+        if (is_null_or_undefined(argc, argv, i))
+            return std::nullopt;
+        return getter<T>::get(ctx, argc, argv, i);
+    }
+};
+template <typename T> struct getter<T, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
+    HEDLEY_NON_NULL(1, 3)
+    static T &get(JSContext *ctx, int argc, JSValue *argv, int i) {
+        if (HEDLEY_UNLIKELY(i >= argc)) {
+            throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
+        }
+        auto ptr = value_helpers<remove_ref_cv_t<T> *>::as(ctx, argv[i]);
+        if (HEDLEY_UNLIKELY(ptr == nullptr)) {
+            throw js_exception(JS_ThrowTypeError(ctx, "Argument %d is not of type %s", i, typeid(T).name()));
+        }
+        return *static_cast<remove_ref_cv_t<T> *>(ptr);
+    }
+};
+template <typename T> struct getter<T *, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
+    HEDLEY_NON_NULL(1, 3)
+    static T *get(JSContext *ctx, int argc, JSValue *argv, int i) {
+        auto ptr = value_helpers<remove_ref_cv_t<T> *>::as(ctx, argv[i]);
+        return static_cast<remove_ref_cv_t<T> *>(ptr);
+    }
+};
+template <typename T> struct getter<remaining_args<T>> {
+    HEDLEY_NON_NULL(1, 3)
+    static remaining_args<T> get(JSContext *ctx, int argc, JSValue *argv, int i) {
+        if (HEDLEY_UNLIKELY(i >= argc)) {
+            return {};
+        }
+        remaining_args<T> ret(argc - i);
+        for (int j = i; j < argc; ++j) {
+            ret.at(j) = std::move(getter<T>::get(ctx, argc, argv, j));
+        }
+        return ret;
+    }
+};
+// Avoid incurring a copy for JSValues used in arguments
+template <> struct getter<JSValue> {
+    static JSValue get(JSContext *ctx, int argc, JSValue *argv, int i) {
+        if (HEDLEY_UNLIKELY(i >= argc)) {
+            throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
+        }
+        return argv[i];
+    }
+};
+
+template <typename T> struct setter {
+    HEDLEY_NON_NULL(1)
+    static JSValue set(JSContext *ctx, const T &v) { return value_helpers<T>::from(ctx, v); }
+};
+template <> struct setter<JSValue> {
+    HEDLEY_NON_NULL(1)
+    static JSValue set(JSContext *ctx, const JSValue &v) { return v; }
+};
+
+struct this_getter {
+    HEDLEY_PURE
+    static void *get(JSValue js_this, uint32_t id) {
+        void *r = JS_GetOpaque(js_this, id);
+        return r;
+    }
+};
+template <typename T> HEDLEY_NON_NULL(1, 3) static T get(JSContext *ctx, int argc, JSValue *argv, int i) {
+    return getter<T>::get(ctx, argc, argv, i);
+}
+template <typename T> HEDLEY_NON_NULL(1) static JSValue set(JSContext *ctx, const T &v) {
+    return setter<T>::set(ctx, v);
+}
+template <typename T> static T *get_class(JSValue js_this) {
+    return static_cast<T *>(this_getter::get(js_this, internal_class_meta<T>::data.id));
+}
+
+static void assert_called_new(JSContext *ctx, JSValue v) {
+    if (HEDLEY_UNLIKELY(!get<must_be<bool>>(ctx, 1, &v, 0))) {
+        throw js_exception(JS_ThrowTypeError(ctx, "Class constructor must be called with new"));
+    }
+}
+}; // namespace arg_list_helpers
 
 template <auto Func> struct binder {
     template <typename T> struct binder_inner;

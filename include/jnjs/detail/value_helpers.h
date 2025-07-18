@@ -24,42 +24,31 @@ template <> struct value_helpers<null> {
 };
 
 template <> struct value_helpers<bool> {
-    static bool is(JSContext *, JSValue v) { return JS_IsBool(v); }
-    static bool is_convertible(JSContext *, JSValue) { return true; }
+    constexpr static bool is(JSContext *, JSValue v) { return JS_VALUE_GET_TAG(v) == JS_TAG_BOOL; }
+    constexpr static bool is_convertible(JSContext *, JSValue) { return true; }
     static bool as(JSContext *c, JSValue v) { return JS_ToBool(c, v) != 0; }
-    static JSValue from(JSContext *c, const bool &v) { return JS_NewBool(c, v); }
+    constexpr static JSValue from(JSContext *, const bool &v) { return JSValue{v, JS_TAG_BOOL}; }
 };
 
 template <> struct value_helpers<int32_t> {
-    HEDLEY_CONST
     constexpr static bool is(JSContext *, JSValue v) { return v.tag == JS_TAG_INT; }
-    HEDLEY_CONST
     constexpr static bool is_convertible(JSContext *, JSValue) { return true; }
-    HEDLEY_NON_NULL(1)
-    HEDLEY_CONST
     static int32_t as(JSContext *c, JSValue v) {
         int32_t ret;
         JS_ToInt32(c, &ret, v);
         return ret;
     }
-    HEDLEY_CONST
     constexpr static JSValue from(JSContext *, const int32_t &v) { return JSValue{v, JS_TAG_INT}; }
 };
 
 template <> struct value_helpers<int64_t> {
-    HEDLEY_NON_NULL(1)
-    HEDLEY_CONST
     constexpr static bool is(JSContext *, JSValue v) { return v.tag == JS_TAG_SHORT_BIG_INT || v.tag == JS_TAG_INT; }
-    HEDLEY_NON_NULL(1)
-    HEDLEY_CONST
     constexpr static bool is_convertible(JSContext *, JSValue) { return true; }
-    HEDLEY_NON_NULL(1)
     static int64_t as(JSContext *c, JSValue v) {
         int64_t ret;
         JS_ToInt64(c, &ret, v);
         return ret;
     }
-    HEDLEY_NON_NULL(1)
     static JSValue from(JSContext *c, const int64_t &v) { return JS_NewInt64(c, v); }
 };
 

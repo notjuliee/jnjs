@@ -6,11 +6,12 @@
  * @date 2025-07-14
  */
 
-#include "detail/value_helpers.h"
 #include "detail/value_ext/all.h"
+#include "detail/value_helpers.h"
 
 #include "binding.h"
 #include "context.h"
 #include "function.h"
+#include "module.h"
 #include "runtime.h"
 #include "value.h"
