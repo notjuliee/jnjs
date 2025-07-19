@@ -42,6 +42,10 @@ class value {
     }
 
     template <typename T> bool operator==(const T &rhs) const {
+        return detail::value_helpers<T>::is(_ctx, _v) && detail::value_helpers<T>::as(_ctx, _v) == rhs;
+    }
+
+    template <typename T> bool kinda_eq(const T &rhs) const {
         return detail::value_helpers<T>::is_convertible(_ctx, _v) && detail::value_helpers<T>::as(_ctx, _v) == rhs;
     }
 
