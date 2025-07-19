@@ -41,6 +41,30 @@ class value {
         return *this;
     }
 
+    value operator[](const char *name) const noexcept {
+        if (HEDLEY_UNLIKELY(_ctx == nullptr)) {
+            return {};
+        }
+        return value(JS_GetPropertyStr(_ctx, _v, name), _ctx);
+    }
+
+    value operator[](const int idx) const noexcept {
+        if (HEDLEY_UNLIKELY(_ctx == nullptr)) {
+            return {};
+        }
+        return value(JS_GetPropertyInt64(_ctx, _v, idx), _ctx);
+    }
+
+    value operator[](const value &other) const noexcept {
+        if (HEDLEY_UNLIKELY(_ctx == nullptr)) {
+            return {};
+        }
+        const auto a = JS_ValueToAtom(_ctx, other._v);
+        const auto r = JS_GetProperty(_ctx, _v, a);
+        JS_FreeAtom(_ctx, a);
+        return value(r, _ctx);
+    }
+
     template <typename T> bool operator==(const T &rhs) const {
         return detail::value_helpers<T>::is(_ctx, _v) && detail::value_helpers<T>::as(_ctx, _v) == rhs;
     }
@@ -59,42 +83,15 @@ class value {
     JSContext *_ctx = nullptr;
     friend context;
     friend function;
-    friend borrowed_value;
     friend detail::value_helpers<value>;
     friend detail::value_helpers<function>;
-    friend detail::value_helpers<borrowed_value>;
 };
 
-class borrowed_value : public value {
-  public:
-    borrowed_value() = default;
-    ~borrowed_value() noexcept = default;
-
-    borrowed_value(const borrowed_value &o) = default;
-    borrowed_value(borrowed_value &&o) noexcept = default;
-    borrowed_value &operator=(const borrowed_value &o) noexcept = default;
-    borrowed_value &operator=(borrowed_value &&o) noexcept = default;
-
-    [[nodiscard]] value take() const { return value(JS_DupValue(_ctx, _v), _ctx); }
-
-  private:
-    explicit borrowed_value(JSValue v, JSContext *ctx) : value(v, ctx) {}
-    friend detail::value_helpers<borrowed_value>;
-};
-
-namespace detail {
-template <> struct value_helpers<value> {
+template <> struct detail::value_helpers<value> {
     static bool is(JSContext *, JSValue) { return true; }
     static bool is_convertible(JSContext *, JSValue) { return true; }
     static value as(JSContext *c, JSValue v) { return value(JS_DupValue(c, v), c); }
     static JSValue from(JSContext *c, const value &v) { return JS_DupValue(c, v._v); }
-};
-template <> struct value_helpers<borrowed_value> {
-    static bool is(JSContext *, JSValue) { return true; }
-    static bool is_convertible(JSContext *, JSValue) { return true; }
-    static borrowed_value as(JSContext *c, JSValue v) { return borrowed_value(v, c); }
-    static JSValue from(JSContext *c, const borrowed_value &v) { return JS_DupValue(c, v._v); }
-};
-} // namespace detail
+}; // namespace detail
 
 } // namespace jnjs
