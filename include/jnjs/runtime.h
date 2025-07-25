@@ -1,9 +1,7 @@
 #pragma once
-
 /**
- * @file jnjs.h
- * @brief all includes for jnjs
- * @date 2025-07-14
+ * @file runtime.h
+ * @brief JS runtime.
  */
 
 #include <memory>
@@ -15,29 +13,33 @@
 namespace jnjs {
 
 /**
- * @brief js runtime instance
- * @note only one runtime can ever exist in the applications lifecycle
+ * @brief JS runtime instance.
+ * @note Only one runtime can ever exist during the applications lifecycle.
  */
 class runtime : detail::impl_ptr<JSRuntime> {
     using base = detail::impl_ptr<JSRuntime>;
 
   public:
+    /**
+     * @brief Get the singleton instance of the JS runtime.
+     * @return Singleton instance of the JS runtime.
+     */
     static runtime &instance() {
         static runtime instance;
         return instance;
     }
 
     /**
-     * @brief create a new js context
-     * @return a js context using this runtime
+     * @brief Create a new js context.
+     * @return New JS context using this runtime.
      */
     static context new_context() { return instance()._new_context(); }
 
   private:
-    runtime();
-    ~runtime() = default;
+    runtime();            /**< @internal Create a new runtime. */
+    ~runtime() = default; /**< @internal Destroy the runtime. */
 
-    context _new_context();
+    context _new_context(); /**< @internal Create a new JS context using this runtime. */
 };
 
 } // namespace jnjs

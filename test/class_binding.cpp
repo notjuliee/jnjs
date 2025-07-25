@@ -61,12 +61,12 @@ TEST_CASE("Class binding", "[class]") {
 
     SECTION("Dynamic creation single") {
         REQUIRE(ctx.eval("const i = new dynamic_test();").is<undefined>());
-        REQUIRE(ctx.eval("i.a").as<int>() == 0);
-        REQUIRE(ctx.eval("i.a = 3").as<int>() == 3);
-        REQUIRE(ctx.eval("i.a").as<int>() == 3);
+        REQUIRE(ctx.eval("i.a") == 0);
+        REQUIRE(ctx.eval("i.a = 3") == 3);
+        REQUIRE(ctx.eval("i.a") == 3);
         REQUIRE(ctx.eval("const i2 = new dynamic_test(42);").is<undefined>());
-        REQUIRE(ctx.eval("i2.a").as<int>() == 42);
+        REQUIRE(ctx.eval("i2.a") == 42);
         REQUIRE(ctx.eval("i.copy(i2)").is<undefined>());
-        REQUIRE(ctx.eval("i.a").as<int>() == 42);
+        REQUIRE(ctx.eval("i.a") == 42);
     }
 }

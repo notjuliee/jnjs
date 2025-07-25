@@ -1,9 +1,7 @@
 #pragma once
-
 /**
  * @file jnjs.h
- * @brief all includes for jnjs
- * @date 2025-07-14
+ * @brief All includes for jnjs
  */
 
 #include "detail/value_ext/all.h"
