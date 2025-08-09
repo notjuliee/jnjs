@@ -161,7 +161,7 @@ template <typename T> struct getter<remaining_args<T>> {
         }
         remaining_args<T> ret(argc - i);
         for (int j = i; j < argc; ++j) {
-            ret.at(j) = std::move(getter<T>::get(ctx, argc, argv, j));
+            ret.at(j - i) = std::move(getter<T>::get(ctx, argc, argv, j));
         }
         return ret;
     }
