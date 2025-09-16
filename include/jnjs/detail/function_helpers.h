@@ -5,6 +5,7 @@
  * @internal
  */
 
+#include <exception>
 #include <functional>
 #include <optional>
 #include <type_traits>
@@ -283,6 +284,20 @@ static void assert_called_new(JSContext *ctx, JSValue v) {
 } // namespace arg_list_helpers
 
 /**
+ * @internal
+ * @brief Convert unexpected native exceptions into QuickJS errors.
+ */
+HEDLEY_NON_NULL(1)
+inline JSValue translate_std_exception(JSContext *ctx, const std::exception &e) {
+    return JS_ThrowInternalError(ctx, "C++ exception: %s", e.what());
+}
+
+HEDLEY_NON_NULL(1)
+inline JSValue translate_unknown_exception(JSContext *ctx) {
+    return JS_ThrowInternalError(ctx, "C++ exception: <unknown>");
+}
+
+/**
  * @brief Binder for a function.
  * @tparam Func Address of the function to bind.
  */
@@ -304,6 +319,18 @@ template <auto Func> struct binder {
         using arg_types = std::tuple<TArgs...>;
         static constexpr size_t num_args = sizeof...(TArgs);
 
+        template <std::size_t Index, typename T>
+        static getter_type_t<T> get_arg_or_default(JSContext *ctx, int argc, JSValue *argv) {
+            if (Index >= static_cast<std::size_t>(argc)) {
+                if constexpr (std::is_default_constructible_v<getter_type_t<T>>) {
+                    return getter_type_t<T>{};
+                }
+                throw js_exception(
+                    JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", static_cast<int>(Index), argc));
+            }
+            return arg_list_helpers::get<getter_type_t<T>>(ctx, argc, argv, static_cast<int>(Index));
+        }
+
         /**
          * @internal
          * @brief Invoke `Func` with the provided arguments.
@@ -317,7 +344,7 @@ template <auto Func> struct binder {
         HEDLEY_NON_NULL(1, 3)
         HEDLEY_PURE static ret_type invoke(JSContext *ctx, int argc, JSValue *argv, std::index_sequence<Is...>) {
             return Func(std::forward<getter_type_t<TArgs> &&>(
-                arg_list_helpers::get<getter_type_t<TArgs>>(ctx, argc, argv, Is))...);
+                get_arg_or_default<Is, TArgs>(ctx, argc, argv))...);
         }
 
         /**
@@ -366,6 +393,10 @@ template <auto Func> struct binder {
             return inner::call_impl(ctx, argc, argv);
         } catch (js_exception &e) {
             return e.v;
+        } catch (const std::exception &e) {
+            return translate_std_exception(ctx, e);
+        } catch (...) {
+            return translate_unknown_exception(ctx);
         }
     }
 
@@ -388,6 +419,10 @@ template <auto Func> struct binder {
             return inner::call_impl(ctx, argc, argv);
         } catch (js_exception &e) {
             return e.v;
+        } catch (const std::exception &e) {
+            return translate_std_exception(ctx, e);
+        } catch (...) {
+            return translate_unknown_exception(ctx);
         }
     }
 };
@@ -415,6 +450,18 @@ template <typename Klass, auto Func> struct class_binder {
         using arg_types = std::tuple<TArgs...>;
         static constexpr size_t num_args = sizeof...(TArgs);
 
+        template <std::size_t Index, typename T>
+        static getter_type_t<T> get_arg_or_default(JSContext *ctx, int argc, JSValue *argv) {
+            if (Index >= static_cast<std::size_t>(argc)) {
+                if constexpr (std::is_default_constructible_v<getter_type_t<T>>) {
+                    return getter_type_t<T>{};
+                }
+                throw js_exception(
+                    JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", static_cast<int>(Index), argc));
+            }
+            return arg_list_helpers::get<getter_type_t<T>>(ctx, argc, argv, static_cast<int>(Index));
+        }
+
         /**
          * @internal
          * @brief Invoke `Klass->Func` with the provided arguments.
@@ -430,7 +477,7 @@ template <typename Klass, auto Func> struct class_binder {
         static ret_type invoke(JSContext *ctx, JSValue js_this, int argc, JSValue *argv, std::index_sequence<Is...>) {
             Klass *kThis = arg_list_helpers::get_class<Klass>(js_this);
             return (kThis->*Func)(std::forward<getter_type_t<TArgs> &&>(
-                arg_list_helpers::get<getter_type_t<TArgs>>(ctx, argc, argv, Is))...);
+                get_arg_or_default<Is, TArgs>(ctx, argc, argv))...);
         }
 
         template <typename TRetI = TRet>
@@ -448,6 +495,8 @@ template <typename Klass, auto Func> struct class_binder {
             return arg_list_helpers::set<undefined>(ctx, undefined{});
         }
     };
+    template <typename TRet, typename... TArgs>
+    struct binder_inner<TRet (Klass::*)(TArgs...) const> : binder_inner<TRet (Klass::*)(TArgs...)> {};
 
     using inner = binder_inner<decltype(Func)>;
     using ret_type = typename inner::ret_type;
@@ -458,6 +507,10 @@ template <typename Klass, auto Func> struct class_binder {
             return inner::call_impl(ctx, js_this, argc, argv);
         } catch (js_exception &e) {
             return e.v;
+        } catch (const std::exception &e) {
+            return translate_std_exception(ctx, e);
+        } catch (...) {
+            return translate_unknown_exception(ctx);
         }
     }
 
@@ -469,6 +522,10 @@ template <typename Klass, auto Func> struct class_binder {
             return inner::call_impl(ctx, js_this, 0, &js_this);
         } catch (js_exception &e) {
             return e.v;
+        } catch (const std::exception &e) {
+            return translate_std_exception(ctx, e);
+        } catch (...) {
+            return translate_unknown_exception(ctx);
         }
     }
 
@@ -479,6 +536,10 @@ template <typename Klass, auto Func> struct class_binder {
             return inner::call_impl(ctx, js_this, 1, &arg);
         } catch (js_exception &e) {
             return e.v;
+        } catch (const std::exception &e) {
+            return translate_std_exception(ctx, e);
+        } catch (...) {
+            return translate_unknown_exception(ctx);
         }
     }
 };
