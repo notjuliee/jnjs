@@ -42,4 +42,13 @@ template <typename T> struct getter_type<const T *> {
 };
 template <typename T> using getter_type_t = typename getter_type<T>::type;
 
+template <typename T> struct remove_member_const {
+    using type = T;
+};
+template <typename Klass, typename TRet, typename... TArgs>
+struct remove_member_const<TRet (Klass::*)(TArgs...) const> {
+    using type = TRet (Klass::*)(TArgs...);
+};
+template <typename T> using remove_member_const_t = typename remove_member_const<T>::type;
+
 } // namespace jnjs::detail

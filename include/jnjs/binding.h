@@ -45,7 +45,7 @@ template <typename Klass> struct wrapped_class_builder {
      * @brief create a new class builder
      * @param name bound class name
      */
-    constexpr explicit wrapped_class_builder(const char *name, detail::key<Klass> = {}) { _d.def.class_name = name; }
+    constexpr explicit wrapped_class_builder(const char *name) { _d.def.class_name = name; }
 
     /**
      * @brief bind an instance method

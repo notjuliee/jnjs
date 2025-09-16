@@ -15,6 +15,12 @@ void install_rt_class(JSRuntime *rt, const class_builder_data &d, internal_class
 } // namespace
 } // namespace detail
 
+void context::_decl_rt_class_impl(detail::internal_class_meta_data &o) const {
+    if (o.id != 0)
+        return;
+    JS_NewClassID(JS_GetRuntime(get()), &o.id);
+}
+
 void context::_decl_class_impl(const detail::class_builder_data &d, detail::internal_class_meta_data &oid) {
     auto *ctx = get();
     detail::install_rt_class(JS_GetRuntime(ctx), d, oid);

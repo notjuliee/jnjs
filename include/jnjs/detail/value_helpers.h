@@ -85,6 +85,19 @@ template <> struct value_helpers<uint64_t> {
     static JSValue from(JSContext *c, const uint64_t &v) { return JS_NewInt64(c, static_cast<int64_t>(v)); }
 };
 
+template <> struct value_helpers<double> {
+    constexpr static bool is(JSContext *, const JSValue v) { return JS_VALUE_GET_TAG(v) == JS_TAG_FLOAT64; }
+    constexpr static bool is_convertible(JSContext *, JSValue) { return true; }
+    static double as(JSContext *c, const JSValue v) {
+        if (JS_VALUE_GET_TAG(v) == JS_TAG_FLOAT64)
+            return JS_VALUE_GET_FLOAT64(v);
+        double ret;
+        JS_ToFloat64(c, &ret, v);
+        return ret;
+    }
+    static JSValue from(JSContext *c, const double &v) { return JS_NewFloat64(c, v); }
+};
+
 template <> struct value_helpers<JSValue> { // lol
     static bool is(JSContext *, JSValue) { return true; }
     static bool is_convertible(JSContext *, JSValue) { return true; }

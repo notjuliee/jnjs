@@ -7,6 +7,10 @@ add_executable(jnjs_tests
         pointers.cpp
         subscript.cpp
         value.cpp
+        value_edge_cases.cpp
+        function_error_handling.cpp
+        class_robustness.cpp
+        context_management.cpp
 )
 target_link_libraries(jnjs_tests PRIVATE Catch2::Catch2WithMain jnjs)
 catch_discover_tests(jnjs_tests)
