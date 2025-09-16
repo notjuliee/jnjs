@@ -2,6 +2,8 @@
 
 #include <jnjs/jnjs.h>
 
+#include "helpers.h"
+
 TEST_CASE("Basic tests", "[basic]") {
     auto ctx = jnjs::runtime::new_context();
     SECTION("eval") {

@@ -2,6 +2,8 @@
 
 #include <jnjs/jnjs.h>
 
+#include "helpers.h"
+
 using namespace jnjs;
 
 namespace {

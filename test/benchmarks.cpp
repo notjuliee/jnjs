@@ -2,6 +2,8 @@
 
 #include <jnjs/jnjs.h>
 
+#include "helpers.h"
+
 #ifdef _MSC_VER
 #define noinline __declspec(noinline)
 #else

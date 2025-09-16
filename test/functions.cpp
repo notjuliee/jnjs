@@ -3,6 +3,8 @@
 
 #include <jnjs/jnjs.h>
 
+#include "helpers.h"
+
 namespace {
 int c_add(int a, int b) { return a + b; }
 } // namespace

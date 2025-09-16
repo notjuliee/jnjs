@@ -2,6 +2,8 @@
 
 #include <jnjs/jnjs.h>
 
+#include "helpers.h"
+
 TEST_CASE("Subscript operator", "[subscript]") {
     auto ctx = jnjs::runtime::new_context();
     jnjs::value v1 = ctx.eval("({ a: 1, b: 2 })");
