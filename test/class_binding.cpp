@@ -69,4 +69,16 @@ TEST_CASE("Class binding", "[class]") {
         REQUIRE(ctx.eval("i.copy(i2)").is<undefined>());
         REQUIRE(ctx.eval("i.a") == 42);
     }
+
+    SECTION("Native access to JS instances") {
+        REQUIRE(ctx.eval("globalThis.native_acc = new dynamic_test(7); native_acc;").is<dynamic_test *>());
+        auto dyn_val = ctx.eval("native_acc");
+        auto *ptr = dyn_val.as<dynamic_test *>();
+        REQUIRE(ptr != nullptr);
+        REQUIRE(ptr->a == 7);
+        REQUIRE(ctx.eval("native_acc.a = 11; native_acc.a;") == 11);
+        REQUIRE(ptr->a == 11);
+        ptr->a = 24;
+        REQUIRE(ctx.eval("native_acc.a") == 24);
+    }
 }
