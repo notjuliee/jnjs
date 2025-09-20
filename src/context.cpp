@@ -20,7 +20,7 @@ void context::_decl_class_impl(const detail::class_builder_data &d, detail::inte
     detail::install_rt_class(JS_GetRuntime(ctx), d, oid);
 
     auto proto = JS_NewObject(ctx);
-    JS_SetPropertyFunctionList(ctx, proto, d.fns, d.cur_fn);
+    JS_SetPropertyFunctionList(ctx, proto, d.fns, static_cast<int>(d.cur_fn));
 
     if (d.ctor) {
         JSValue ctor = JS_NewCFunction2(ctx, d.ctor, d.def.class_name, d.ctor_len, JS_CFUNC_constructor, 0);

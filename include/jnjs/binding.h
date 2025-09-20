@@ -1,18 +1,33 @@
 #pragma once
 
+#include "config.h"
 #include "detail/function_helpers.h"
 #include "detail/fwd.h"
 #include "detail/util.h"
 
 #include <array>
+#include <cstdint>
+#include <cstdlib>
+#include <limits>
+#include <stdexcept>
 
 namespace jnjs {
 
 namespace detail {
 
+template <typename Klass> [[noreturn]] void throw_class_function_overflow() {
+#if defined(__cpp_exceptions)
+    throw std::length_error("jnjs::wrapped_class_builder exceeded JNJS_WRAPPED_CLASS_MAX_FUNCTIONS");
+#else
+    std::abort();
+#endif
+}
+
 struct class_builder_data {
-    constexpr static uint8_t max_function_count = 64;
-    uint8_t cur_fn = 0;
+    constexpr static std::size_t max_function_count = config::wrapped_class_max_functions;
+    static_assert(max_function_count > 0 && max_function_count <= std::numeric_limits<uint16_t>::max(),
+        "JNJS_WRAPPED_CLASS_MAX_FUNCTIONS must be 0 < x <= 65535");
+    uint16_t cur_fn = 0;
     JSCFunctionListEntry fns[max_function_count] = {};
     JSClassDef def = {};
     JSCFunction *ctor = nullptr;
@@ -115,6 +130,9 @@ template <typename Klass> struct wrapped_class_builder {
     }
 
     constexpr JSCFunctionListEntry &_next_entry(const char *name) {
+        if (HEDLEY_UNLIKELY(_d.cur_fn >= detail::class_builder_data::max_function_count)) {
+            detail::throw_class_function_overflow<Klass>();
+        }
         auto &fn = _d.fns[_d.cur_fn++];
         fn.name = name;
         fn.prop_flags = JS_PROP_ENUMERABLE;
