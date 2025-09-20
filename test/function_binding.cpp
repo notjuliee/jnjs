@@ -4,9 +4,14 @@
 
 #include <numeric>
 
-#include "helpers.h"
-
 using namespace jnjs;
+
+namespace jnjs {
+std::ostream &operator<<(std::ostream &os, const value &v) {
+    os << v.as<std::string>();
+    return os;
+}
+} // namespace jnjs
 
 namespace {
 int get_answer() { return 42; }
