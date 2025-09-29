@@ -105,19 +105,6 @@ template <> struct value_helpers<JSValue> { // lol
     static JSValue from(JSContext *c, const JSValue &v) { return JS_DupValue(c, v); }
 };
 
-template <typename T> struct value_helpers<T *, std::enable_if_t<has_build_v<T>>> {
-    static bool is(JSContext *, const JSValue v) { return JS_GetClassID(v) == internal_class_meta<T>::data.id; }
-    static bool is_convertible(JSContext *c, const JSValue v) { return is(c, v); }
-    static T *as(JSContext *, const JSValue v) {
-        return static_cast<T *>(JS_GetOpaque(v, internal_class_meta<T>::data.id));
-    }
-    static JSValue from(JSContext *c, T *v) {
-        auto ret = JS_NewObjectClass(c, internal_class_meta<T>::data.id);
-        JS_SetOpaque(ret, v);
-        return ret;
-    }
-};
-
 template <typename T> struct value_helpers<must_be<T>> {
     static bool is(JSContext *c, JSValue v) { return value_helpers<T>::is(c, v); }
     static bool is_convertible(JSContext *c, const JSValue v) { return is(c, v); }

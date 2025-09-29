@@ -14,6 +14,7 @@
 
 #include <quickjs.h>
 
+#include "./js_storage.h"
 #include "fwd.h"
 #include "hedley.h"
 #include "type_traits.h"
@@ -120,17 +121,17 @@ template <typename T> struct getter<std::optional<T>> {
  * @brief Get a reference to a C++ class instance from a JavaScript argument list.
  * @tparam T A class type that has been registered with the context.
  */
-template <typename T> struct getter<T, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
+template <typename T> struct getter<T, std::enable_if_t<has_build_v<std::remove_cvref_t<T>>>> {
     HEDLEY_NON_NULL(1, 3)
     static T &get(JSContext *ctx, int argc, JSValue *argv, int i) {
         if (HEDLEY_UNLIKELY(i >= argc)) {
             throw js_exception(JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", i, argc));
         }
-        auto ptr = value_helpers<remove_ref_cv_t<T> *>::as(ctx, argv[i]);
+        auto ptr = value_helpers<std::remove_cvref_t<T> *>::as(ctx, argv[i]);
         if (HEDLEY_UNLIKELY(ptr == nullptr)) {
             throw js_exception(JS_ThrowTypeError(ctx, "Argument %d is not of type %s", i, typeid(T).name()));
         }
-        return *static_cast<remove_ref_cv_t<T> *>(ptr);
+        return *static_cast<std::remove_cvref_t<T> *>(ptr);
     }
 };
 /**
@@ -138,14 +139,14 @@ template <typename T> struct getter<T, std::enable_if_t<has_build_v<remove_ref_c
  * @brief Get a pointer to a C++ class instance from a JavaScript argument list, allowing for null pointers.
  * @tparam T A class type that has been registered with the context.
  */
-template <typename T> struct getter<T *, std::enable_if_t<has_build_v<remove_ref_cv_t<T>>>> {
+template <typename T> struct getter<T *, std::enable_if_t<has_build_v<std::remove_cvref_t<T>>>> {
     HEDLEY_NON_NULL(1, 3)
     static T *get(JSContext *ctx, int argc, JSValue *argv, int i) {
         if (i >= argc) {
             return nullptr; // Allow null pointers
         }
-        auto ptr = value_helpers<remove_ref_cv_t<T> *>::as(ctx, argv[i]);
-        return static_cast<remove_ref_cv_t<T> *>(ptr);
+        auto ptr = value_helpers<std::remove_cvref_t<T> *>::as(ctx, argv[i]);
+        return static_cast<std::remove_cvref_t<T> *>(ptr);
     }
 };
 
@@ -210,7 +211,7 @@ template <> struct setter<JSValue> {
  * @internal
  * @brief Helper to get a C++ class instance from a JS this object.
  */
-struct this_getter {
+template <typename T> struct this_getter {
     /**
      * @internal
      * @brief Get a C++ class instance from a JS this object.
@@ -219,9 +220,12 @@ struct this_getter {
      * @return A pointer to the C++ class instance, or nullptr if not found.
      */
     HEDLEY_PURE
-    static void *get(JSValue js_this, uint32_t id) {
-        void *r = JS_GetOpaque(js_this, id);
-        return r;
+    static T *get(JSValue js_this) {
+        void *r = JS_GetOpaque(js_this, internal_class_meta<stored_class<T>>::data.id);
+        if (!r)
+            return nullptr;
+        auto *holder = static_cast<stored_class<T> *>(r);
+        return holder->get();
     }
 };
 
@@ -265,9 +269,7 @@ static JSValue set(JSContext *ctx, const T &v) {
  * @param js_this Value of this in a JS function call
  * @return Pointer to the C++ class instance associated with this JS object, or nullptr if not found.
  */
-template <typename T> static T *get_class(JSValue js_this) {
-    return static_cast<T *>(this_getter::get(js_this, internal_class_meta<T>::data.id));
-}
+template <typename T> static T *get_class(JSValue js_this) { return this_getter<T>::get(js_this); }
 
 /**
  * @internal
@@ -320,14 +322,7 @@ template <auto Func> struct binder {
         static constexpr size_t num_args = sizeof...(TArgs);
 
         template <std::size_t Index, typename T>
-        static getter_type_t<T> get_arg_or_default(JSContext *ctx, int argc, JSValue *argv) {
-            if (Index >= static_cast<std::size_t>(argc)) {
-                if constexpr (std::is_default_constructible_v<getter_type_t<T>>) {
-                    return getter_type_t<T>{};
-                }
-                throw js_exception(
-                    JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", static_cast<int>(Index), argc));
-            }
+        static getter_type_t<T> get_arg(JSContext *ctx, int argc, JSValue *argv) {
             return arg_list_helpers::get<getter_type_t<T>>(ctx, argc, argv, static_cast<int>(Index));
         }
 
@@ -343,8 +338,7 @@ template <auto Func> struct binder {
         template <std::size_t... Is>
         HEDLEY_NON_NULL(1, 3)
         HEDLEY_PURE static ret_type invoke(JSContext *ctx, int argc, JSValue *argv, std::index_sequence<Is...>) {
-            return Func(std::forward<getter_type_t<TArgs> &&>(
-                get_arg_or_default<Is, TArgs>(ctx, argc, argv))...);
+            return Func(std::forward<getter_type_t<TArgs> &&>(get_arg<Is, TArgs>(ctx, argc, argv))...);
         }
 
         /**
@@ -451,14 +445,7 @@ template <typename Klass, auto Func> struct class_binder {
         static constexpr size_t num_args = sizeof...(TArgs);
 
         template <std::size_t Index, typename T>
-        static getter_type_t<T> get_arg_or_default(JSContext *ctx, int argc, JSValue *argv) {
-            if (Index >= static_cast<std::size_t>(argc)) {
-                if constexpr (std::is_default_constructible_v<getter_type_t<T>>) {
-                    return getter_type_t<T>{};
-                }
-                throw js_exception(
-                    JS_ThrowRangeError(ctx, "Argument out of range (%d >= %d)", static_cast<int>(Index), argc));
-            }
+        static getter_type_t<T> get_arg(JSContext *ctx, int argc, JSValue *argv) {
             return arg_list_helpers::get<getter_type_t<T>>(ctx, argc, argv, static_cast<int>(Index));
         }
 
@@ -476,8 +463,7 @@ template <typename Klass, auto Func> struct class_binder {
         HEDLEY_NON_NULL(1, 4)
         static ret_type invoke(JSContext *ctx, JSValue js_this, int argc, JSValue *argv, std::index_sequence<Is...>) {
             Klass *kThis = arg_list_helpers::get_class<Klass>(js_this);
-            return (kThis->*Func)(std::forward<getter_type_t<TArgs> &&>(
-                get_arg_or_default<Is, TArgs>(ctx, argc, argv))...);
+            return (kThis->*Func)(std::forward<getter_type_t<TArgs> &&>(get_arg<Is, TArgs>(ctx, argc, argv))...);
         }
 
         template <typename TRetI = TRet>

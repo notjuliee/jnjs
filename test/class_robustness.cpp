@@ -185,11 +185,10 @@ TEST_CASE("Class property access edge cases", "[class][properties]") {
     }
 
     SECTION("Non-existent property access") {
-        ctx.eval("const obj = new RobustTestClass();");
+        REQUIRE(ctx.eval("const obj = new RobustTestClass(123);") == undefined{});
 
         // Accessing non-existent property
-        auto result = ctx.eval("obj.nonExistentProperty");
-        REQUIRE(result.is<undefined>());
+        REQUIRE(ctx.eval("obj.nonExistentProperty") == undefined{});
 
         // Setting non-existent property
         ctx.eval("obj.newProperty = 123;");

@@ -3,7 +3,7 @@
 #include "config.h"
 #include "detail/function_helpers.h"
 #include "detail/fwd.h"
-#include "detail/util.h"
+#include "detail/js_storage.h"
 
 #include <array>
 #include <cstdint>
@@ -16,11 +16,7 @@ namespace jnjs {
 namespace detail {
 
 template <typename Klass> [[noreturn]] void throw_class_function_overflow() {
-#if defined(__cpp_exceptions)
     throw std::length_error("jnjs::wrapped_class_builder exceeded JNJS_WRAPPED_CLASS_MAX_FUNCTIONS");
-#else
-    std::abort();
-#endif
 }
 
 struct class_builder_data {
@@ -45,7 +41,10 @@ template <typename Klass> struct wrapped_class_builder {
      * @brief create a new class builder
      * @param name bound class name
      */
-    constexpr explicit wrapped_class_builder(const char *name) { _d.def.class_name = name; }
+    constexpr explicit wrapped_class_builder(const char *name) {
+        _d.def.class_name = name;
+        _bind_dtor();
+    }
 
     /**
      * @brief bind an instance method
@@ -116,7 +115,6 @@ template <typename Klass> struct wrapped_class_builder {
      * @tparam Args construct argument types
      */
     template <typename... Args> constexpr void bind_ctor() {
-        _bind_dtor();
         using helper = ctor_helper<Args...>;
         using binder = detail::binder<helper::call>;
         _d.ctor = binder::call;
@@ -141,11 +139,13 @@ template <typename Klass> struct wrapped_class_builder {
     }
 
     template <typename... Args> struct ctor_helper {
-        static Klass *call(Args &&...args) { return new Klass(std::forward<Args &&>(args)...); }
+        static detail::stored_class<Klass> *call(Args &&...args) {
+            return new detail::owned_stored_class<Klass>(std::forward<Args &&>(args)...);
+        }
     };
     struct dtor_helper {
         static void call(JSRuntime *, JSValue v) {
-            auto *t = detail::arg_list_helpers::get_class<Klass>(v);
+            auto *t = detail::value_helpers<detail::stored_class<Klass> *>::as(nullptr, v);
             delete t;
         }
     };

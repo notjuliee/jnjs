@@ -40,7 +40,7 @@ class context : detail::impl_ptr<JSContext> {
 
     template <typename K, typename = std::enable_if_t<detail::has_build_v<K>, void>> void install_class() {
         constexpr static wrapped_class_builder<K> binder = K::build_js_class();
-        return _decl_class_impl(binder._d, detail::internal_class_meta<K>::data);
+        return _decl_class_impl(binder._d, detail::internal_class_meta<detail::stored_class<K>>::data);
     }
 
     template <typename K> void install_opaque_class() { _decl_rt_class_impl(detail::internal_class_meta<K>::data); }

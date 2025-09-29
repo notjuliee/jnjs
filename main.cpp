@@ -65,7 +65,7 @@ int main() {
         auto ret = fn(1, 2);
 
         test_class t;
-        ctx.set_global("test_class", &t);
+        ctx.set_global("test_class", t);
 
         eval_log(ctx, "test_class.do_something('123')");
         eval_log(ctx, "test_class.do_something(123, 456)");
