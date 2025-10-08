@@ -1,21 +1,10 @@
 add_executable(jnjs_tests
-        basic.cpp
-        functions.cpp
-        class_binding.cpp
-        function_binding.cpp
-        module.cpp
-        pointers.cpp
-        subscript.cpp
-        value.cpp
-        value_edge_cases.cpp
-        function_error_handling.cpp
-        class_robustness.cpp
-        context_management.cpp
+        example_basic.cpp
+        class_binding_tests.cpp
+        runtime_context_tests.cpp
+        script_eval_tests.cpp
+        value_semantics_tests.cpp
+        function_binding_tests.cpp
 )
 target_link_libraries(jnjs_tests PRIVATE Catch2::Catch2WithMain jnjs)
 catch_discover_tests(jnjs_tests)
-
-add_executable(jnjs_benchmarks
-        benchmarks.cpp
-)
-target_link_libraries(jnjs_benchmarks PRIVATE Catch2::Catch2WithMain jnjs)

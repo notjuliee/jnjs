@@ -1,16 +1,31 @@
 #pragma once
 
-#include <ostream>
+#include <catch2/catch_tostring.hpp>
 
-#include <jnjs/value.h>
+#include <jnjs/jnjs.h>
 
-namespace jnjs {
-inline std::ostream &operator<<(std::ostream &os, const value &v) {
-    os << v.as<std::string>();
-    return os;
-}
-inline std::ostream &operator<<(std::ostream &os, const undefined &) {
-    os << "undefined";
-    return os;
-}
-} // namespace jnjs
+namespace Catch {
+
+template <> struct StringMaker<jnjs::undefined> {
+    static std::string convert(const jnjs::undefined &) { return "undefined"; }
+};
+
+template <> struct StringMaker<jnjs::value> {
+    static std::string convert(const jnjs::value &v) {
+        if (v == jnjs::undefined{}) {
+            return "undefined";
+        }
+        if (v == jnjs::null{}) {
+            return "null";
+        }
+        try {
+            return v.as<std::string>();
+        } catch (const std::exception &e) {
+            return std::string{"<non-string value: "} + e.what() + ">";
+        } catch (...) {
+            return "<non-string value>";
+        }
+    }
+};
+
+} // namespace Catch
